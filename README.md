@@ -1,3 +1,3 @@
-# fudou
+# futo
 
 > Goppert's kernel.
