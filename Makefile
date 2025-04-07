@@ -6,6 +6,8 @@ QEMU_FLAGS		=
 
 OBJDUMP_BIN		= aarch64-linux-gnu-objdump
 
+GDB_FLAGS		= -s -S
+
 $(KERNEL_ELF): kernel
 
 .PHONY: kernel run objdump gdb all clean
@@ -19,8 +21,8 @@ run: $(KERNEL_ELF)
 objdump: $(KERNEL_ELF)
 	$(OBJDUMP_BIN) -d $(KERNEL_ELF) > $(dir $(KERNEL_ELF))kernel.dump
 
-
 gdb: $(KERNEL_ELF)
+	$(QEMU_BIN) -M $(QEMU_MACHINE) $(QEMU_FLAGS) -kernel $(KERNEL_ELF) $(GDB_FLAGS)
 
 all: run
 
