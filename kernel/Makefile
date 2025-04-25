@@ -1,13 +1,19 @@
-KERNEL_SRC	= $(wildcard src/*.c) $(wildcard src/**/*.c)
-KERNEL_ELF	= target/aarch64/kernel
+KERNEL_SRC	= src/kernel.zig
+KERNEL_ELF	= target/aarch64/kernel8.img
 
-CC			= aarch64-linux-gnu-gcc
+ZC			= zig
 
-.PHONY: all clean
+.PHONY: all kernel fs clean
 
-all:
+all: kernel fs
+
+kernel:
 	@mkdir -p target/aarch64
-	$(CC) $(KERNEL_SRC) -o $(KERNEL_ELF)
+	$(ZC) build-exe $(KERNEL_SRC) -O Debug -femit-bin=$(KERNEL_ELF) -target aarch64-linux
+
+fs:
+	@mkdir -p target
+	# TODO
 
 clean:
 	rm -rf target
