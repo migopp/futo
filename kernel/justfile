@@ -1,0 +1,21 @@
+target := "target"
+arch := "aarch64"
+
+# Build the kernel.
+[doc('Build the kernel')]
+build:
+	mkdir -p {{target/arch}}
+	zig build-exe src/kernel.zig \
+		-O Debug \
+		-target aarch64-freestanding \
+		-femit-bin={{target/arch/"kernel8.img"}}
+
+# Build the boot filesystem image.
+[doc('Build the boot filesystem image')]
+bootfs:
+	mkdir -p {{target}}
+
+# Clean up build artifacts.
+[doc('Clean up build artifacts')]
+clean:
+	rm -rf {{target}}
