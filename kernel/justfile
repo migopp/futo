@@ -5,10 +5,10 @@ arch := "aarch64"
 [doc('Build the kernel')]
 build:
 	mkdir -p {{target/arch}}
-	zig build-exe src/kernel.zig \
-		-O Debug \
-		-target aarch64-freestanding \
-		-femit-bin={{target/arch/"kernel8.img"}}
+	zig build \
+		-Doptimize=Debug \
+		-p {{target/arch}} \
+		--prefix-exe-dir .
 
 # Build the boot filesystem image.
 [doc('Build the boot filesystem image')]
