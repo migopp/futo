@@ -36,3 +36,10 @@ debug: build
 		-M raspi3b \
 		-kernel kernel/target/aarch64/kernel8.img \
 		-s -S
+
+# Attach GDB to the kernel.
+[group('debug')]
+[doc('Attach GDB to running kernel instance')]
+attach: build
+	gdb -tui kernel/target/aarch64/kernel8.img \
+		-ex "target remote localhost:1234"
