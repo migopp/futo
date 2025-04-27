@@ -2,6 +2,7 @@ target := "target"
 arch := "aarch64"
 
 # Build the kernel.
+[group('build')]
 [doc('Build the kernel')]
 build:
 	mkdir -p {{target/arch}}
@@ -11,11 +12,22 @@ build:
 		--prefix-exe-dir .
 
 # Build the boot filesystem image.
+[group('build')]
 [doc('Build the boot filesystem image')]
 bootfs:
 	mkdir -p {{target}}
 
 # Clean up build artifacts.
+[group('build')]
 [doc('Clean up build artifacts')]
 clean:
 	rm -rf {{target}}
+
+# Build kernel docs.
+[group('build')]
+[doc('Build kernel docs')]
+docs:
+	mkdir -p {{target/arch}}
+	zig build docs -p {{target/arch}}
+
+

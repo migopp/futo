@@ -34,8 +34,19 @@ pub fn build(b: *std.Build) void {
     // Can't forget the ld script.
     kernel_img.setLinkerScript(b.path("src/link.ld"));
 
-    // Go.
+    // Kernel build step.
     b.installArtifact(kernel_img);
     const kernel_step = b.step("kernel", "Build the kernel");
     kernel_step.dependOn(&kernel_img.step);
+
+    // Generate documentation settings.
+    const install_docs = b.addInstallDirectory(.{
+        .source_dir = kernel_img.getEmittedDocs(),
+        .install_dir = .prefix,
+        .install_subdir = "docs",
+    });
+
+    // Docs build step.
+    const docs_step = b.step("docs", "Copy documentation");
+    docs_step.dependOn(&install_docs.step);
 }
