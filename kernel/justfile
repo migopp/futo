@@ -22,12 +22,3 @@ bootfs:
 [doc('Clean up build artifacts')]
 clean:
 	rm -rf {{target}}
-
-# Build kernel docs.
-[group('build')]
-[doc('Build kernel docs')]
-docs:
-	mkdir -p {{target/arch}}
-	zig build docs -p {{target/arch}}
-
-

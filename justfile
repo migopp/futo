@@ -43,3 +43,11 @@ debug: build
 attach: build
 	gdb -tui kernel/target/aarch64/kernel8.img \
 		-ex "target remote localhost:1234"
+
+
+# Build kernel docs.
+[group('docs')]
+[working-directory: 'kernel']
+[doc('Build kernel docs')]
+docs:
+	zig build docs -p ..
