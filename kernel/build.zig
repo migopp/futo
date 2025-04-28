@@ -20,7 +20,7 @@ pub fn build(b: *std.Build) void {
     //
     // I assume there is a good reason for doing so.
     const kernel_mod = b.createModule(.{
-        .root_source_file = b.path("src/kernel.zig"),
+        .root_source_file = b.path("src/start.zig"),
         .target = b.resolveTargetQuery(target),
         .optimize = opt,
     });
