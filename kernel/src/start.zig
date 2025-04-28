@@ -21,10 +21,19 @@ export fn _start() linksection(".text.boot") callconv(.Naked) noreturn {
     asm volatile (
         \\ ldr  x5, =__bss_stacks
         \\ mov  sp, x5
-        // FIXME: Jump to `kernel.init` somehow.
+        \\ bl   _init_trampoline
     );
+    hcf();
+}
 
-    // Halt and catch fire.
+/// Transitions to kernel module code.
+export fn _init_trampoline() noreturn {
+    kernel.init();
+    hcf();
+}
+
+/// Halt and catch fire.
+pub inline fn hcf() noreturn {
     while (true) {
         asm volatile ("wfe");
     }
