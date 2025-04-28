@@ -137,7 +137,7 @@ pub fn Just(comptime T: type) type {
             /// The ordering in the case of a success.
             success_ordering: builtin.AtomicOrder = builtin.AtomicOrder.seq_cst,
             /// The ordering in the case of a failure.
-            failure_ordering: builtin.AtomicOrder = builtin.AtomicOrder.unordered,
+            failure_ordering: builtin.AtomicOrder = builtin.AtomicOrder.seq_cst,
         };
 
         /// Shorthand for `@cmpxchgStrong`.
