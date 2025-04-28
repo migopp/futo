@@ -109,7 +109,7 @@ pub fn Just(comptime T: type) type {
         /// https://ziglang.org/documentation/master/std/#std.builtin.AtomicRmwOp
         pub inline fn rmw(self: *Self, comptime op: builtin.AtomicRmwOp, value: T, comptime opts: RmwOptions) T {
             const read_value: T = @atomicRmw(T, &(self.data.?), op, value, opts.ordering);
-            // The really neat part here is taht since the following values are known at compile time,
+            // The really neat part here is that since the following values are known at compile time,
             // there are not actually any branches in the generated code.
             // https://ziglang.org/documentation/master/#comptime
             //
@@ -151,3 +151,112 @@ pub fn Just(comptime T: type) type {
         }
     };
 }
+
+test "Just.init" {
+    const testing = @import("std").testing;
+    const x = Just(u8).init(42);
+    try testing.expect(x.data.? == 42);
+
+    const y = Just(bool).init(true);
+    try testing.expect(y.data.?);
+}
+
+test "Just.load/store" {
+    const testing = @import("std").testing;
+    var x = Just(u8).init(0);
+    var y: u8 = x.load(.{});
+    try testing.expect(y == 0);
+    x.store(27, .{});
+    y = x.load(.{});
+    try testing.expect(y == 27);
+}
+
+test "Just.add" {
+    const testing = @import("std").testing;
+    var x = Just(u16).init(1337);
+    var y: u16 = x.add(1, .{ .return_modified = true });
+    try testing.expect(y == 1338);
+    y = x.add(1, .{});
+    try testing.expect(y == 1338);
+    y = x.load(.{});
+    try testing.expect(y == 1339);
+}
+
+test "Just.sub" {
+    const testing = @import("std").testing;
+    var x = Just(u16).init(1337);
+    var y: u16 = x.sub(1, .{ .return_modified = true });
+    try testing.expect(y == 1336);
+    y = x.sub(1, .{});
+    try testing.expect(y == 1336);
+    y = x.load(.{});
+    try testing.expect(y == 1335);
+}
+
+test "Just.xchg" {
+    const testing = @import("std").testing;
+    var x = Just(f64).init(1337.1337);
+    var y: f64 = x.xchg(0.1337, .{ .return_modified = true });
+    try testing.expect(y == 0.1337);
+    y = x.xchg(13.37, .{});
+    try testing.expect(y == 0.1337);
+    y = x.load(.{});
+    try testing.expect(y == 13.37);
+
+    const TestEnum = enum { one, two, three, four };
+    var a = Just(TestEnum).init(.one);
+    var b: TestEnum = a.xchg(.two, .{ .return_modified = true });
+    try testing.expect(b == .two);
+    b = a.xchg(.three, .{});
+    try testing.expect(b == .two);
+    b = a.load(.{});
+    try testing.expect(b == .three);
+}
+
+test "Just.rmw" {
+    const testing = @import("std").testing;
+    var x = Just(u64).init(1337);
+    var y: u64 = x.rmw(.Sub, 1, .{ .return_modified = true });
+    try testing.expect(y == 1336);
+    y = x.rmw(.Sub, 1, .{});
+    try testing.expect(y == 1336);
+    y = x.load(.{});
+    try testing.expect(y == 1335);
+
+    const TestEnum = enum { one, two, three, four };
+    var a = Just(TestEnum).init(.one);
+    var b: TestEnum = a.xchg(.two, .{ .return_modified = true });
+    try testing.expect(b == .two);
+    b = a.xchg(.three, .{});
+    try testing.expect(b == .two);
+    b = a.load(.{});
+    try testing.expect(b == .three);
+}
+
+test "Just.casStrong" {
+    const testing = @import("std").testing;
+    var x = Just(i8).init(1);
+    const y: i8 = 1;
+    const t: i8 = 2;
+    var a: ?i8 = x.casStrong(y, t, .{});
+    try testing.expect(a == null);
+    a = x.casStrong(y, t + 1, .{});
+    try testing.expect(a.? == 2);
+}
+
+test "Just.casWeak" {
+    const testing = @import("std").testing;
+    var x = Just(i16).init(1337);
+    const y: i16 = 1337;
+    const t: i16 = 1338;
+    while (true) {
+        const a: ?i16 = x.casWeak(y, t, .{});
+        if (a == null) {
+            break;
+        }
+    }
+    const a: ?i16 = x.casWeak(y, t + 1, .{});
+    try testing.expect(a.? == 1338);
+}
+
+// TODO: Some multithreaded tests would be good.
