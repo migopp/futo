@@ -22,7 +22,7 @@ export fn _start() linksection(".text.boot") callconv(.Naked) noreturn {
         \\ ldr  x5, =__bss_stacks
         \\ mov  sp, x5
         \\ bl   _init_trampoline
-    );
+        ::: "x5");
     hcf();
 }
 
