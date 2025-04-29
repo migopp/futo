@@ -9,8 +9,9 @@ const FutoBuilder = struct {
         module: ?*std.Build.Module = null,
     };
 
-    start_mod: KernelModule = .{ .name = "arch/aarch64/start", .root = "src/arch/aarch64/start.zig" },
-    atomic_mod: KernelModule = .{ .name = "sync/atomic", .root = "src/sync/atomic.zig" },
+    start_mod: KernelModule = .{ .name = "arch/start", .root = "src/arch/aarch64/start.zig" },
+    machine_mod: KernelModule = .{ .name = "arch/machine", .root = "src/arch/aarch64/machine.zig" },
+    sync_mod: KernelModule = .{ .name = "sync", .root = "src/sync/sync.zig" },
     kernel_mod: KernelModule = .{ .name = "kernel", .root = "src/kernel.zig" },
 
     builder: ?*std.Build = null,

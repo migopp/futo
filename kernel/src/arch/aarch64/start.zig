@@ -1,3 +1,4 @@
+const machine = @import("arch/machine");
 const kernel = @import("kernel");
 
 /// Kernel entry point.
@@ -23,18 +24,11 @@ export fn _start() linksection(".text.boot") callconv(.Naked) noreturn {
         \\ mov  sp, x5
         \\ bl   _init_trampoline
         ::: "x5");
-    hcf();
+    machine.hcf();
 }
 
 /// Transitions to kernel module code.
 export fn _init_trampoline() noreturn {
     kernel.init();
-    hcf();
-}
-
-/// Halt and catch fire.
-pub inline fn hcf() noreturn {
-    while (true) {
-        asm volatile ("wfe");
-    }
+    machine.hcf();
 }
