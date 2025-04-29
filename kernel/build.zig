@@ -1,52 +1,131 @@
-// Simple build script for `futo`.
-//
-// I tried using `zig build-exe`, but this appears to be much more configurable.
-// It's pretty barren at the moment, but I may need more options in the future.
-
+// Build script for `futo`.
 const std = @import("std");
 
-pub fn build(b: *std.Build) void {
-    // Targeting raspi3b, so  want aarch64-freestanding.
-    const target = std.Target.Query{
-        .cpu_arch = std.Target.Cpu.Arch.aarch64,
-        .os_tag = std.Target.Os.Tag.freestanding,
-        .abi = std.Target.Abi.none,
+const FutoBuilder = struct {
+    const Self = @This();
+    const KernelModule = struct {
+        name: []const u8,
+        root: []const u8,
+        module: ?*std.Build.Module = null,
     };
-    const opt = b.standardOptimizeOption(.{});
 
-    // The documentation insists that I create an explicit module,
-    // rather than having these properties inlined in the `addExecutable`
-    // configuration options.
+    start_mod: KernelModule = .{ .name = "arch/aarch64/start", .root = "src/arch/aarch64/start.zig" },
+    atomic_mod: KernelModule = .{ .name = "sync/atomic", .root = "src/sync/atomic.zig" },
+    kernel_mod: KernelModule = .{ .name = "kernel", .root = "src/kernel.zig" },
+
+    builder: ?*std.Build = null,
+    kernel_img: ?*std.Build.Step.Compile = null,
+
+    // Attach a build graph to construct a valid builder object.
+    pub fn init(builder: *std.Build) FutoBuilder {
+        return .{ .builder = builder };
+    }
+
+    // Determines if the current field is a module.
+    inline fn isModule(field: std.builtin.Type.StructField) bool {
+        return field.type == KernelModule;
+    }
+
+    // Generate a `std.Build.Module` for each `KernelModule` listed above.
+    fn generateModules(self: *Self) void {
+        const info = @typeInfo(Self);
+        var builder = self.builder.?;
+
+        // Configure the target and optimization level.
+        const target_query: std.Target.Query = .{
+            .cpu_arch = std.Target.Cpu.Arch.aarch64,
+            .os_tag = std.Target.Os.Tag.freestanding,
+            .abi = std.Target.Abi.none,
+        };
+        const target: std.Build.ResolvedTarget = builder.resolveTargetQuery(target_query);
+        const optimize: std.builtin.OptimizeMode = builder.standardOptimizeOption(.{});
+
+        // Generate `std.Build.Module`.
+        inline for (info.@"struct".fields) |field| {
+            // Skip the field if it's not a module.
+            if (!isModule(field)) continue;
+
+            // Construct the actual module.
+            const field_mod: *KernelModule = &@field(self, field.name);
+            field_mod.module = builder.addModule(field_mod.name, .{
+                .root_source_file = builder.path(field_mod.root),
+                // Use target configured above.
+                .target = target,
+                // Use optimization option passed in by user.
+                .optimize = optimize,
+            });
+        }
+    }
+
+    // Links all the `std.Build.Module` instances to each other.
+    // This is so that any module can import any other module.
     //
-    // I assume there is a good reason for doing so.
-    const kernel_mod = b.createModule(.{
-        .root_source_file = b.path("src/start.zig"),
-        .target = b.resolveTargetQuery(target),
-        .optimize = opt,
-    });
-    const kernel_img = b.addExecutable(.{
-        // Maybe this should just be an elf file, but I didn't want to deal
-        // with cross-architecture `objcopy`, so we ball.
-        .name = "kernel8.img",
-        .root_module = kernel_mod,
-    });
+    // Thankfully for us, `zig` is OK with circular dependencies.
+    fn linkModules(self: *Self) void {
+        const info = @typeInfo(Self);
+        inline for (info.@"struct".fields, 0..) |parent, i| {
+            // Skip if parent is not a module.
+            if (!isModule(parent)) continue;
 
-    // Can't forget the ld script.
-    kernel_img.setLinkerScript(b.path("src/link.ld"));
+            // Extract the parent `KernelModule`.
+            const parent_module: *KernelModule = &@field(self, parent.name);
+            inline for (info.@"struct".fields, 0..) |child, j| {
+                // Skip if the child is not a module.
+                if (!isModule(child)) continue;
 
-    // Kernel build step.
-    b.installArtifact(kernel_img);
-    const kernel_step = b.step("kernel", "Build the kernel");
-    kernel_step.dependOn(&kernel_img.step);
+                // Skip if it's the same field.
+                //
+                // Doesn't make much sense to link a module to itself.
+                if (i == j) continue;
 
-    // Generate documentation settings.
-    const install_docs = b.addInstallDirectory(.{
-        .source_dir = kernel_img.getEmittedDocs(),
-        .install_dir = .prefix,
-        .install_subdir = "docs",
-    });
+                // Link parent to child.
+                const child_module: KernelModule = @field(self, child.name);
+                parent_module.*.module.?.addImport(child_module.name, child_module.module.?);
+            }
+        }
+    }
 
-    // Docs build step.
-    const docs_step = b.step("docs", "Copy documentation");
-    docs_step.dependOn(&install_docs.step);
+    // Configures the build of the kernel image.
+    fn configKernelImg(self: *Self) void {
+        const builder: *std.Build = self.builder.?;
+        self.kernel_img = builder.addExecutable(.{
+            .name = "kernel8.img",
+            .root_module = self.start_mod.module.?,
+        });
+        self.kernel_img.?.setLinkerScript(builder.path("src/link.ld"));
+        builder.installArtifact(self.kernel_img.?);
+
+        // Configure `zig build`.
+        const kernel_img_step = builder.step("futo", "Build the futo kernel");
+        kernel_img_step.dependOn(&self.kernel_img.?.step);
+    }
+
+    // Configures the build of the docs.
+    fn configDocs(self: *Self) void {
+        const builder: *std.Build = self.builder.?;
+        // Generate documentation settings.
+        const docs = builder.addInstallDirectory(.{
+            .source_dir = self.kernel_img.?.getEmittedDocs(),
+            .install_dir = .prefix,
+            .install_subdir = "docs",
+        });
+
+        // Docs build step.
+        const docs_step = builder.step("docs", "Build futo documentation");
+        docs_step.dependOn(&docs.step);
+    }
+
+    // Builds `futo`.
+    pub fn build(self: *Self) void {
+        self.generateModules();
+        self.linkModules();
+        self.configKernelImg();
+        self.configDocs();
+    }
+};
+
+// This is easy.
+pub fn build(b: *std.Build) void {
+    var futo_builder: FutoBuilder = FutoBuilder.init(b);
+    futo_builder.build();
 }
