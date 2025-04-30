@@ -10,6 +10,7 @@ build:
 		-Doptimize=Debug \
 		-p {{target/arch}} \
 		--prefix-exe-dir .
+	llvm-objcopy -O binary {{target/arch/"kernel.elf"}} {{target/arch/"kernel8.img"}}
 
 # Build the boot filesystem image.
 [group('build')]

@@ -15,7 +15,7 @@ const FutoBuilder = struct {
     kernel_mod: KernelModule = .{ .name = "kernel", .root = "src/kernel.zig" },
 
     builder: ?*std.Build = null,
-    kernel_img: ?*std.Build.Step.Compile = null,
+    kernel_elf: ?*std.Build.Step.Compile = null,
 
     // Attach a build graph to construct a valid builder object.
     pub fn init(builder: *std.Build) FutoBuilder {
@@ -87,18 +87,18 @@ const FutoBuilder = struct {
     }
 
     // Configures the build of the kernel image.
-    fn configKernelImg(self: *Self) void {
+    fn configKernelElf(self: *Self) void {
         const builder: *std.Build = self.builder.?;
-        self.kernel_img = builder.addExecutable(.{
-            .name = "kernel8.img",
+        self.kernel_elf = builder.addExecutable(.{
+            .name = "kernel.elf",
             .root_module = self.start_mod.module.?,
         });
-        self.kernel_img.?.setLinkerScript(builder.path("src/link.ld"));
-        builder.installArtifact(self.kernel_img.?);
+        self.kernel_elf.?.setLinkerScript(builder.path("src/link.ld"));
+        builder.installArtifact(self.kernel_elf.?);
 
         // Configure `zig build`.
         const kernel_img_step = builder.step("futo", "Build the futo kernel");
-        kernel_img_step.dependOn(&self.kernel_img.?.step);
+        kernel_img_step.dependOn(&self.kernel_elf.?.step);
     }
 
     // Configures the build of the docs.
@@ -106,7 +106,7 @@ const FutoBuilder = struct {
         const builder: *std.Build = self.builder.?;
         // Generate documentation settings.
         const docs = builder.addInstallDirectory(.{
-            .source_dir = self.kernel_img.?.getEmittedDocs(),
+            .source_dir = self.kernel_elf.?.getEmittedDocs(),
             .install_dir = .prefix,
             .install_subdir = "docs",
         });
@@ -120,7 +120,7 @@ const FutoBuilder = struct {
     pub fn build(self: *Self) void {
         self.generateModules();
         self.linkModules();
-        self.configKernelImg();
+        self.configKernelElf();
         self.configDocs();
     }
 };
