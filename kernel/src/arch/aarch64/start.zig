@@ -1,4 +1,4 @@
-const machine = @import("arch/machine");
+const machine = @import("arch").machine;
 const kernel = @import("kernel");
 
 /// Kernel entry point.

@@ -10,8 +10,8 @@ const FutoBuilder = struct {
     };
 
     start_mod: KernelModule = .{ .name = "arch/start", .root = "src/arch/aarch64/start.zig" },
-    machine_mod: KernelModule = .{ .name = "arch/machine", .root = "src/arch/aarch64/machine.zig" },
-    sync_mod: KernelModule = .{ .name = "sync", .root = "src/sync/sync.zig" },
+    arch_mod: KernelModule = .{ .name = "arch", .root = "src/arch/aarch64/mod.zig" },
+    sync_mod: KernelModule = .{ .name = "sync", .root = "src/sync/mod.zig" },
     kernel_mod: KernelModule = .{ .name = "kernel", .root = "src/kernel.zig" },
 
     builder: ?*std.Build = null,
