@@ -2,7 +2,6 @@
 const std = @import("std");
 
 const FutoBuilder = struct {
-    const Self = @This();
     const KernelModule = struct {
         name: []const u8,
         root: []const u8,
@@ -28,8 +27,8 @@ const FutoBuilder = struct {
     }
 
     // Generate a `std.Build.Module` for each `KernelModule` listed above.
-    fn generateModules(self: *Self) void {
-        const info = @typeInfo(Self);
+    fn generateModules(self: *FutoBuilder) void {
+        const info = @typeInfo(FutoBuilder);
         var builder = self.builder.?;
 
         // Configure the target and optimization level.
@@ -62,8 +61,8 @@ const FutoBuilder = struct {
     // This is so that any module can import any other module.
     //
     // Thankfully for us, `zig` is OK with circular dependencies.
-    fn linkModules(self: *Self) void {
-        const info = @typeInfo(Self);
+    fn linkModules(self: *FutoBuilder) void {
+        const info = @typeInfo(FutoBuilder);
         inline for (info.@"struct".fields, 0..) |parent, i| {
             // Skip if parent is not a module.
             if (!isModule(parent)) continue;
@@ -87,7 +86,7 @@ const FutoBuilder = struct {
     }
 
     // Configures the build of the kernel image.
-    fn configKernelElf(self: *Self) void {
+    fn configKernelElf(self: *FutoBuilder) void {
         const builder: *std.Build = self.builder.?;
         self.kernel_elf = builder.addExecutable(.{
             .name = "kernel.elf",
@@ -102,7 +101,7 @@ const FutoBuilder = struct {
     }
 
     // Configures the build of the docs.
-    fn configDocs(self: *Self) void {
+    fn configDocs(self: *FutoBuilder) void {
         const builder: *std.Build = self.builder.?;
         // Generate documentation settings.
         const docs = builder.addInstallDirectory(.{
@@ -117,7 +116,7 @@ const FutoBuilder = struct {
     }
 
     // Builds `futo`.
-    pub fn build(self: *Self) void {
+    pub fn build(self: *FutoBuilder) void {
         self.generateModules();
         self.linkModules();
         self.configKernelElf();
@@ -127,6 +126,6 @@ const FutoBuilder = struct {
 
 // This is easy.
 pub fn build(b: *std.Build) void {
-    var futo_builder: FutoBuilder = FutoBuilder.init(b);
-    futo_builder.build();
+    var fb = FutoBuilder.init(b);
+    fb.build();
 }

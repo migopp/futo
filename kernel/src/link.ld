@@ -2,7 +2,7 @@
  * A linker script for futo.
  * Specifically designed to run on the raspi3b working off of aarch64.
  *
- * Mostlt lifted from:
+ * Mostly lifted from:
  * https://wiki.osdev.org/Raspberry_Pi_Bare_Bones
  */
 
