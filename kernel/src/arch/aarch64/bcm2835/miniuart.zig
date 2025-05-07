@@ -17,7 +17,7 @@ pub const registers = struct {
             recv: u8,
             lsb_baud: u8,
         },
-        reserved: u24,
+        _reserved: u24,
     };
 
     /// Primarily used to enable interrupts.
@@ -32,26 +32,62 @@ pub const registers = struct {
             int: packed struct {
                 // If this bit is set, the interrupt line is asserted whenever
                 // the transmit FIFO is empty.
-                trns: bool,
+                trns: u1,
                 // If this bit is set, the inerrupt line is asserted whenever
                 // the receive FIFO holds at least 1 byte.
-                recv: bool,
-                reserved: u5,
+                recv: u1,
+                _reserved: u5,
             },
             // Otherwise, we get access to the most significant byte
             // of the baud rate.
             msb_baud: u8,
         },
-        reserved: u24,
+        _reserved: u24,
     };
 
     /// Shows the interrupt status.
     ///
     /// It also has two FIFO enable status bits and (when writing) FIFO clear bits.
-    pub const IER = packed struct {};
+    pub const IER = packed struct {
+        // This bit is _clear_ whenever an interrupt is pending.
+        int_pending: u1,
+        // On read, this register shows the interrupt ID bit:
+        //     00: No interrupts
+        //     01: Transmit holding register empty
+        //     10: Receiver holds valid byte
+        //     11: <Not possible>
+        // On write:
+        //     Writing with bit 1 set will clear the receive FIFO
+        //     Writing with bit 2 set will clear the transmit FIFO
+        int_status: u2,
+        // These always read as zero.
+        _read_zero_1: u1,
+        _read_zero_2: u2,
+        // Both bits are always read as 1 as the FIFOs are always enabled.
+        _fifo_status: u2,
+        _reserved: u24,
+    };
 
     /// Controls the line data format and gives access to the baudrate register.
-    pub const LCR = packed struct {};
+    pub const LCR = packed struct {
+        // If clear the UART works in 7-bit mode.
+        // If set the UART works in 8-bit mode.
+        data_size: u1,
+        // Some of these bits have functions in a 16550 compatible UART but are
+        // ignored in this case.
+        _reserved_1: u5,
+        // If set high the UART1_TX line is pulled low continuously.
+        // If held for at least 12 bit times that will indicate a break condition.
+        //
+        // Really called "Break" according to page 14, but this is a reserved word
+        // in Zig. Could have been a good time to break out the @"break", but alas
+        // I am a little coward boy.
+        brk: u1,
+        // If set the first Mini UART registers give access to the baudrate.
+        // During operation this bit must be cleared.
+        dlab: u1,
+        _reserved_2: u24,
+    };
 
     /// Controls the 'modem' signals.
     pub const MCR = packed struct {};
