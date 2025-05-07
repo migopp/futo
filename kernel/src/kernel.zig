@@ -16,7 +16,8 @@ var kernel_stacks: [max_cores][kernel_stack_sz]u8 align(16) linksection(".bss.st
 pub fn init() void {
     const core: u8 = cores.add(1, .{});
     _ = core;
-    console.init();
+    var serial: console.Instance = console.gimmie();
+    serial.print("futo\n");
     machine.hcf();
 }
 
