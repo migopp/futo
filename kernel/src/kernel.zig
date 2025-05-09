@@ -1,6 +1,5 @@
 const atomic = @import("sync").atomic;
 const machine = @import("arch").machine;
-const console = @import("console");
 
 /// Core counter.
 var cores = atomic.Just(u8).init(0);
