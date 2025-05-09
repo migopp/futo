@@ -7,7 +7,7 @@ pub const registers = struct {
     ///
     /// If the DLAB bit in LCR is set, this register gives access to the
     /// LS 8 bits of the baudrate.
-    pub const IO = packed struct {
+    pub const IO = packed struct(u32) {
         /// These bits depend on the value in the DLAB in the LCR, but
         /// also whether data is being transmitted or received.
         data: packed union {
@@ -26,7 +26,7 @@ pub const registers = struct {
     ///
     /// If the DLAB bit in LCR is set, this register gives access to the
     /// MS 8 bits of the baudrate.
-    pub const IER = packed struct {
+    pub const IER = packed struct(u32) {
         /// These bits can be one of two things depending on the value of
         /// the DLAB but in the LCR.
         data: packed union {
@@ -81,7 +81,7 @@ pub const registers = struct {
     /// Shows the interrupt status.
     ///
     /// It also has two FIFO enable status bits and (when writing) FIFO clear bits.
-    pub const IIR = packed struct {
+    pub const IIR = packed struct(u32) {
         /// This bit is _clear_ whenever an interrupt is pending.
         int_pending: u1,
         /// These bits represent differen values on read/write.
@@ -117,7 +117,7 @@ pub const registers = struct {
     };
 
     /// Controls the line data format and gives access to the baudrate register.
-    pub const LCR = packed struct {
+    pub const LCR = packed struct(u32) {
         /// If clear, the UART works in 7-bit mode.
         /// If set, the UART works in 8-bit mode.
         data_size: u1,
@@ -149,7 +149,7 @@ pub const registers = struct {
     };
 
     /// Controls the 'modem' signals.
-    pub const MCR = packed struct {
+    pub const MCR = packed struct(u32) {
         /// Reserved, write zero, read as don't care.
         ///
         /// Some of these bits have functions in a 16550 compatible UART,
@@ -174,7 +174,7 @@ pub const registers = struct {
     };
 
     /// Shows the data status.
-    pub const LSR = packed struct {
+    pub const LSR = packed struct(u32) {
         /// This bit is set if the receive FIFO holds at least 1 symbol.
         data_ready: u1,
         /// This bit is set if there was a receiver overrun.
@@ -204,7 +204,7 @@ pub const registers = struct {
     };
 
     /// Shows the 'modem' status.
-    pub const MSR = packed struct {
+    pub const MSR = packed struct(u32) {
         /// Reserved, write zero, read as don't care.
         ///
         /// Some of these bits have functions in a 16550 compatible UART,
@@ -230,7 +230,7 @@ pub const registers = struct {
     };
 
     /// Single byte storage.
-    pub const SCR = packed struct {
+    pub const SCR = packed struct(u32) {
         /// One whole extra byte on top of the 134217728 provided by the SDC.
         scratch: u8,
         /// Reserved, write zero, read as don't care.
@@ -239,7 +239,7 @@ pub const registers = struct {
 
     /// Provides access to some extra useful and nice features not found on a
     /// normal 16550 UART.
-    pub const CNTL = packed struct {
+    pub const CNTL = packed struct(u32) {
         /// If this bit is set, the UART receiver is enabled.
         /// If this bit is clear, the UART receiver is disabled.
         recv_enable: u1,
@@ -336,7 +336,7 @@ pub const registers = struct {
 
     /// Provides a lot of useful information about the internal status of the
     /// mini UART not found on a normal 16550 UART.
-    pub const STAT = packed struct {
+    pub const STAT = packed struct(u32) {
         /// If this bit is set, the UART receive FIFO contains at least 1 symbol.
         /// If this bit is clear, the UART receive FIFO is empty.
         symbol_available: u1,
@@ -391,7 +391,7 @@ pub const registers = struct {
     };
 
     /// Allows direct access to the 16-bit wide baudrate counter.
-    pub const BAUD = packed struct {
+    pub const BAUD = packed struct(u32) {
         /// UART baudrate counter.
         baudrate: u16,
         /// Reserved, write zero, read as don't care.
@@ -403,7 +403,6 @@ pub const registers = struct {
 ///
 /// By default, the base location is chosen to be the location listed in the data sheet.
 pub const Controller = struct {
-    base: usize = mmio_base,
     io: *volatile registers.IO = @ptrFromInt(mmio_base),
     ier: *volatile registers.IER = @ptrFromInt(mmio_base + 4),
     iir: *volatile registers.IIR = @ptrFromInt(mmio_base + 8),
@@ -416,10 +415,14 @@ pub const Controller = struct {
     stat: *volatile registers.STAT = @ptrFromInt(mmio_base + 36),
     baud: *volatile registers.BAUD = @ptrFromInt(mmio_base + 40),
 
+    /// Returns a `Controller` based at the default location, `mmio_base`.
+    pub fn init() Controller {
+        return .{};
+    }
+
     /// Returns a `Controller` based at a location of choice.
-    pub fn basedAt(loc: usize) Controller {
+    pub fn initBasedAt(loc: usize) Controller {
         return .{
-            .base = loc,
             .io = @ptrFromInt(loc),
             .ier = @ptrFromInt(loc + 4),
             .iir = @ptrFromInt(loc + 8),
@@ -699,13 +702,14 @@ pub const Controller = struct {
     }
 };
 
-/// Creates a controller with sensible default options.
-pub fn gimmie(opt: anytype) Controller {
-    // Options are currently disregarded.
-    _ = opt;
+/// The canonical miniuart controller.
+var controller: ?Controller = null;
 
-    // Create a controller with sensible default options.
-    return .{};
+/// Initializes the canonical miniuart controller.
+pub fn init() void {
+    if (controller == null) {
+        controller = Controller.init();
+    }
 }
 
 test "miniuart.registers" {

@@ -5,7 +5,7 @@ const mmio_base = 0x7E21_5000;
 const registers = struct {
     /// Used to check any pending interrupts which may be asserted by the
     /// three aux sub blocks.
-    pub const IRQ = packed struct {
+    pub const IRQ = packed struct(u32) {
         /// If set, the UART has an interrupt pending.
         miniuart: u1,
         /// If set, the SPI1 module has an interrupt pending.
@@ -36,7 +36,7 @@ const registers = struct {
     ///     - UART1
     ///     - SPI1
     ///     - SPI2
-    pub const ENB = packed struct {
+    pub const ENB = packed struct(u32) {
         /// If set, the UART is enabled. It will immediately start receiving
         /// data, especially if the UART1_RX line is _low_.
         /// If clear, the UART is disabled. That also disables any UART register
@@ -92,14 +92,17 @@ const registers = struct {
 ///
 /// By default, the base location is chosen to be the location listed in the data sheet.
 pub const Controller = struct {
-    base: usize = mmio_base,
     irq: *volatile registers.IRQ = @ptrFromInt(mmio_base),
     enb: *volatile registers.ENB = @ptrFromInt(mmio_base + 4),
 
+    /// Returns a `Controller` based at the default location, `mmio_base`.
+    pub fn init() Controller {
+        return .{};
+    }
+
     /// Returns a `Controller` based at a location of choice.
-    pub fn basedAt(loc: usize) Controller {
+    pub fn initBasedAt(loc: usize) Controller {
         return .{
-            .base = loc,
             .irq = @ptrFromInt(loc),
             .enb = @ptrFromInt(loc + 4),
         };
@@ -149,6 +152,16 @@ pub const Controller = struct {
         self.enb.disable(.{ .spi_2 = true });
     }
 };
+
+/// The canonical aux controller.
+var controller: ?Controller = null;
+
+/// Initializes the canonical aux controller.
+pub fn init() void {
+    if (controller == null) {
+        controller = Controller.init();
+    }
+}
 
 test "aux.registers" {
     const assert = @import("std").debug.assert;
